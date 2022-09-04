@@ -4,6 +4,7 @@ const express = require('express');
 const PORT = process.env.PORT || 3001;
 const app = express();
 const inputCheck =require('./utils/inputCheck');
+const { query } = require('express');
 
 // Express middleware
 app.use(express.urlencoded({ extended:false}));
@@ -68,6 +69,69 @@ app.get('/api/candidate/:id',(req,res)=>{
     });
 });
 
+
+// update a candidate's party
+app.put('/api/candidate/:id',(req,res)=>{
+const errors = inputCheck(req.body,'party_id');
+if(errors){
+    res.status(400).json({error:errors});
+    return;
+}
+  const sql =`UPDATE candidates SET party_id =?
+  WHERE id =?`;
+  const params =[req.body.party_id,req.params.id];
+
+  db.query(sql,params,(err,result)=>{
+    if (err){
+        res.status(400).json({error:err.message});
+        // check if a record was found
+    }else if(!result.affectedRows){
+      res.json({
+        message:'Candidate not found'
+      });
+    }else {
+        res.json({
+            message:'success',
+            data:req.body,
+            changes:result.affectedRows
+        });
+    }
+  });
+
+});
+
+// Create API Routs for parties
+app.get('/api/parties',(req,res)=>{
+const sql = `SELECT * FROM parties`;
+db.query(sql,(err,rows)=>{
+    if(err){
+        res.status(500).json({error:err.message});
+        return;
+    }
+    res.json({
+        message:'success',
+        data:rows
+    });
+});
+});
+
+// create the endpoint with id parameter
+app.get('/api/party/:id',(req,res)=>{
+    const sql = `SELECT * FROM parties WHERE id=?`;
+    const params = [req.params.id];
+
+    // writing sql query
+    db.query(sql,params,(err,row)=>{
+        if(err){
+            res.status(400).json({erro:err.message});
+            return;
+        }
+        res.json({
+            message:'success',
+            dat:row
+        });
+    });
+});
 // create the endpoint that will delete a candidate from the database.
 
 app.delete('/api/candidate/:id',(req,res)=>{
@@ -77,7 +141,7 @@ app.delete('/api/candidate/:id',(req,res)=>{
  db.query(sql,params,(err,result)=>{
     if(err){
         res.statusMessage(400).json({error:res.message});
-        
+        // check if anything was deleted
     }else if(!result.affectedRows){
         res.json({
             message:'candidate not found'
@@ -92,6 +156,32 @@ app.delete('/api/candidate/:id',(req,res)=>{
  });
 });
 
+// create the end point to delete party from database
+
+app.delete('/api/party/:id',(req,res)=>{
+    const sql = `DELETE FROM parties WHERE id=?`;
+    const params =[req.params.id];
+
+    db.query(sql,params,(err,result)=>{
+
+    if (err){
+        res.status(400).json({error:res.message});
+    }
+    else if(!result.affectedRows){
+      res.json({
+        message:'party not found'
+      })
+    }
+    else{
+        res.json({
+            message:'deleted',
+            changes:result.affectedRows,
+            id:req.params.id
+        });
+    }
+
+    });
+});
 // create the post route to create a candidate
 
 app.post('/api/candidate',({body},res)=>{
